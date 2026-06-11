@@ -1,0 +1,43 @@
+name: Auto-link issue from branch
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  link_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-link issue based on branch or title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const headRef = context.payload.pull_request.head.ref || '';
+            const title = context.payload.pull_request.title || '';
+            const prNumber = context.payload.pull_request.number;
+            const body = context.payload.pull_request.body || '';
+
+            function extractIssue(ref) {
+              const m = ref.match(/(?:issue[-/_]|issue|#)?(\d+)/i);
+              return m ? m[1] : null;
+            }
+
+            let issueNumber = extractIssue(headRef) || extractIssue(title);
+            if (!issueNumber) {
+              console.log('No issue number detected in branch or title.');
+              return;
+            }
+
+            if (body.includes(`#${issueNumber}`)) {
+              console.log(`PR already references issue #${issueNumber}.`);
+              return;
+            }
+
+            const newBody = `${body}\n\nCloses #${issueNumber}`;
+            await github.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              body: newBody,
+            });
+            console.log(`Appended Closes #${issueNumber} to PR body.`);
