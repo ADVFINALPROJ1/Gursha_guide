@@ -1,5 +1,8 @@
 name: Auto-link issue from branch
 
+permissions:
+  pull-requests: write
+
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
