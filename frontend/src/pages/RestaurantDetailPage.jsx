@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ReviewForm from "../components/ReviewForm";
 import API from "../services/api";
 
 const fallbackImage =
@@ -117,21 +118,14 @@ export default function RestaurantDetailPage() {
           </p>
 
           <div className="mt-8 border-t pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Reviews</h2>
-                <p className="mt-1 text-gray-600">
-                  Reviews will be shown here in a later update.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="rounded bg-orange-600 px-4 py-2 font-semibold text-white hover:bg-orange-700"
-              >
-                Write a Review
-              </button>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Write a Review</h2>
+              <p className="mt-1 text-gray-600">
+                Share your experience at this restaurant.
+              </p>
             </div>
+
+            <ReviewForm restaurantId={id} />
           </div>
         </div>
       </section>
