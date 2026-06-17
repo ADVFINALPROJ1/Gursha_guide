@@ -7,6 +7,7 @@ const fallbackImage =
 
 export default function RestaurantListPage() {
   const [restaurants, setRestaurants] = useState([]);
+  const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -24,6 +25,10 @@ export default function RestaurantListPage() {
 
     getRestaurants();
   }, []);
+
+  const filteredRestaurants = restaurants.filter((restaurant) =>
+    restaurant.name.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -85,52 +90,77 @@ export default function RestaurantListPage() {
                 Restaurant List
               </h2>
               <p className="text-gray-600">
-                Showing {restaurants.length} restaurant
-                {restaurants.length === 1 ? "" : "s"}
+                Showing {filteredRestaurants.length} restaurant
+                {filteredRestaurants.length === 1 ? "" : "s"}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {restaurants.map((restaurant) => (
-              <div
-                key={restaurant.id}
-                className="overflow-hidden rounded-lg bg-white shadow"
-              >
-                <img
-                  src={restaurant.image_url || fallbackImage}
-                  alt={restaurant.name}
-                  className="h-44 w-full object-cover"
-                />
+          <div className="mb-6">
+            <label
+              htmlFor="restaurant-search"
+              className="mb-2 block font-semibold text-gray-900"
+            >
+              Search by restaurant name
+            </label>
+            <input
+              id="restaurant-search"
+              type="text"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Type a restaurant name"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+          </div>
 
-                <div className="p-4">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {restaurant.name}
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-orange-700">
-                    {restaurant.location}
-                  </p>
+          {filteredRestaurants.length === 0 ? (
+            <section className="rounded-lg bg-white p-8 text-center shadow">
+              <h2 className="text-xl font-bold text-gray-900">
+                No restaurants found
+              </h2>
+            </section>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredRestaurants.map((restaurant) => (
+                <div
+                  key={restaurant.id}
+                  className="overflow-hidden rounded-lg bg-white shadow"
+                >
+                  <img
+                    src={restaurant.image_url || fallbackImage}
+                    alt={restaurant.name}
+                    className="h-44 w-full object-cover"
+                  />
 
-                  <p className="mt-3 min-h-12 text-gray-700">
-                    {restaurant.description || "No description available yet."}
-                  </p>
+                  <div className="p-4">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {restaurant.name}
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-orange-700">
+                      {restaurant.location}
+                    </p>
 
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-700">
-                      No ratings yet
-                    </span>
+                    <p className="mt-3 min-h-12 text-gray-700">
+                      {restaurant.description || "No description available yet."}
+                    </p>
 
-                    <Link
-                      to={`/restaurants/${restaurant.id}`}
-                      className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
-                    >
-                      View Details
-                    </Link>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-700">
+                        No ratings yet
+                      </span>
+
+                      <Link
+                        to={`/restaurants/${restaurant.id}`}
+                        className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+                      >
+                        View Details
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </main>
