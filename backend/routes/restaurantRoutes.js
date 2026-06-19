@@ -27,7 +27,17 @@ function requireAdmin(req, res, next) {
 
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM restaurants ORDER BY id DESC");
+    const result = await pool.query(
+      `SELECT restaurants.id, restaurants.name, restaurants.location,
+              restaurants.description, restaurants.image_url,
+              restaurants.created_at,
+              ROUND(AVG(reviews.rating)::numeric, 1) AS average_rating,
+              COUNT(reviews.id)::int AS review_count
+       FROM restaurants
+       LEFT JOIN reviews ON restaurants.id = reviews.restaurant_id
+       GROUP BY restaurants.id
+       ORDER BY restaurants.id DESC`
+    );
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching restaurants:", error);
@@ -66,7 +76,15 @@ router.get("/:id", async (req, res) => {
     const restaurantId = req.params.id;
 
     const result = await pool.query(
-      "SELECT * FROM restaurants WHERE id = $1",
+      `SELECT restaurants.id, restaurants.name, restaurants.location,
+              restaurants.description, restaurants.image_url,
+              restaurants.created_at,
+              ROUND(AVG(reviews.rating)::numeric, 1) AS average_rating,
+              COUNT(reviews.id)::int AS review_count
+       FROM restaurants
+       LEFT JOIN reviews ON restaurants.id = reviews.restaurant_id
+       WHERE restaurants.id = $1
+       GROUP BY restaurants.id`,
       [restaurantId]
     );
 
