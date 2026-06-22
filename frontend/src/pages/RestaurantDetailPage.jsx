@@ -102,7 +102,7 @@ export default function RestaurantDetailPage() {
         <section className="mx-auto max-w-4xl rounded-lg border border-red-200 bg-white p-8 text-center shadow">
           <p className="text-lg font-semibold text-red-600">{error}</p>
           <p className="mt-2 text-gray-600">
-            Make sure the backend server is running on port 5002.
+            Make sure the backend server is running and connected to PostgreSQL.
           </p>
           <Link
             to="/"
