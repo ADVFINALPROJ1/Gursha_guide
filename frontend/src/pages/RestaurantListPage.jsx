@@ -5,6 +5,33 @@ import API from "../services/api";
 const fallbackImage =
   "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4";
 
+function RatingStars({ rating }) {
+  const ratingNumber = Number(rating || 0);
+
+  return (
+    <span
+      className="inline-flex items-center gap-0.5"
+      aria-label={`${ratingNumber.toFixed(1)} out of 5`}
+    >
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fillWidth = Math.min(Math.max(ratingNumber - star + 1, 0), 1) * 100;
+
+        return (
+          <span key={star} className="relative inline-block text-gray-300">
+            ★
+            <span
+              className="absolute inset-0 overflow-hidden text-amber-400"
+              style={{ width: `${fillWidth}%` }}
+            >
+              ★
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export default function RestaurantListPage() {
   const [restaurants, setRestaurants] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -51,7 +78,7 @@ export default function RestaurantListPage() {
         <div className="mx-auto max-w-5xl rounded-lg border border-red-200 bg-white p-8 text-center shadow">
           <p className="text-lg font-semibold text-red-600">{error}</p>
           <p className="mt-2 text-gray-600">
-            Make sure the backend server is running on port 5002.
+            Make sure the backend server is running and connected to PostgreSQL.
           </p>
         </div>
       </main>
