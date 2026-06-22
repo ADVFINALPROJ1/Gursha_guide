@@ -33,6 +33,19 @@ function RatingStars({ rating }) {
   );
 }
 
+function getSavedUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem("user"));
+  } catch {
+    return null;
+  }
+}
+
+function clearOldLoginStorage() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
 export default function RestaurantDetailPage() {
   const { id } = useParams();
   const [restaurant, setRestaurant] = useState(null);
@@ -42,6 +55,13 @@ export default function RestaurantDetailPage() {
   const [error, setError] = useState("");
   const [reviewsError, setReviewsError] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editRating, setEditRating] = useState("");
+  const [editComment, setEditComment] = useState("");
+  const [reviewActionMessage, setReviewActionMessage] = useState("");
+  const [reviewActionError, setReviewActionError] = useState("");
+  const [savingReviewId, setSavingReviewId] = useState(null);
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
 
   const getRestaurant = useCallback(async () => {
     try {
@@ -80,6 +100,116 @@ export default function RestaurantDetailPage() {
 
     return () => clearTimeout(timer);
   }, [getRestaurant, getReviews]);
+
+  function startEditingReview(review) {
+    setEditingReviewId(review.id);
+    setEditRating(Number(review.rating).toFixed(1));
+    setEditComment(review.comment);
+    setReviewActionMessage("");
+    setReviewActionError("");
+  }
+
+  function cancelEditingReview() {
+    setEditingReviewId(null);
+    setEditRating("");
+    setEditComment("");
+    setReviewActionError("");
+  }
+
+  async function saveReview(reviewId) {
+    setReviewActionMessage("");
+    setReviewActionError("");
+
+    const ratingNumber = Number(editRating);
+
+    if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
+      setReviewActionError("Rating must be between 1 and 5.");
+      return;
+    }
+
+    if (!editComment.trim()) {
+      setReviewActionError("Comment is required.");
+      return;
+    }
+
+    if (!token) {
+      setReviewActionError("Please login before editing a review.");
+      return;
+    }
+
+    setSavingReviewId(reviewId);
+
+    try {
+      const response = await API.put(
+        `/reviews/${reviewId}`,
+        {
+          rating: ratingNumber,
+          comment: editComment,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          review.id === reviewId
+            ? { ...review, ...response.data.review }
+            : review
+        )
+      );
+      setReviewActionMessage("Review updated successfully.");
+      setEditingReviewId(null);
+      setEditRating("");
+      setEditComment("");
+      getRestaurant();
+    } catch (err) {
+      setReviewActionError(
+        err.response?.data?.message || "Could not update review. Please try again."
+      );
+    } finally {
+      setSavingReviewId(null);
+    }
+  }
+
+  async function deleteReview(reviewId) {
+    const shouldDelete = window.confirm("Delete this review?");
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setReviewActionMessage("");
+    setReviewActionError("");
+
+    if (!token) {
+      setReviewActionError("Please login before deleting a review.");
+      return;
+    }
+
+    setDeletingReviewId(reviewId);
+
+    try {
+      await API.delete(`/reviews/${reviewId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setReviews((currentReviews) =>
+        currentReviews.filter((review) => review.id !== reviewId)
+      );
+      setReviewActionMessage("Review deleted successfully.");
+      getRestaurant();
+    } catch (err) {
+      setReviewActionError(
+        err.response?.data?.message || "Could not delete review. Please try again."
+      );
+    } finally {
+      setDeletingReviewId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -142,8 +272,11 @@ export default function RestaurantDetailPage() {
       ? null
       : Number(restaurant.average_rating).toFixed(1);
   const reviewCount = Number(restaurant.review_count || 0);
-  const savedUser = JSON.parse(localStorage.getItem("user"));
+  clearOldLoginStorage();
+  const token = sessionStorage.getItem("token");
+  const savedUser = token ? getSavedUser() : null;
   const currentUserId = savedUser?.id;
+  const isAdmin = savedUser?.role === "admin";
 
   return (
     <main className="bg-gray-100 px-4 py-8">
@@ -220,6 +353,18 @@ export default function RestaurantDetailPage() {
               </p>
             )}
 
+            {reviewActionMessage && (
+              <p className="mt-4 rounded border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700">
+                {reviewActionMessage}
+              </p>
+            )}
+
+            {reviewActionError && (
+              <p className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                {reviewActionError}
+              </p>
+            )}
+
             {!reviewsLoading && !reviewsError && reviews.length === 0 && (
               <p className="mt-5 rounded border border-dashed border-gray-300 bg-gray-50 p-6 text-center font-medium text-gray-600">
                 No reviews yet
@@ -230,7 +375,11 @@ export default function RestaurantDetailPage() {
               <div className="mt-5 grid gap-4">
                 {reviews.map((review) => {
                   const isMyReview = currentUserId && Number(review.user_id) === Number(currentUserId);
+                  const canManageReview = isMyReview || isAdmin;
                   const reviewRating = Number(review.rating).toFixed(1);
+                  const isEditing = editingReviewId === review.id;
+                  const isSaving = savingReviewId === review.id;
+                  const isDeleting = deletingReviewId === review.id;
 
                   return (
                     <article
@@ -269,7 +418,86 @@ export default function RestaurantDetailPage() {
                           <RatingStars rating={review.rating} /> {reviewRating} / 5
                         </div>
                       </div>
-                      <p className="mt-3 text-gray-700">{review.comment}</p>
+
+                      {isEditing && canManageReview ? (
+                        <div className="mt-4 space-y-4">
+                          <div>
+                            <label
+                              htmlFor={`edit-rating-${review.id}`}
+                              className="mb-1 block text-sm font-medium text-gray-700"
+                            >
+                              Rating
+                            </label>
+                            <input
+                              id={`edit-rating-${review.id}`}
+                              type="number"
+                              min="1"
+                              max="5"
+                              step="0.1"
+                              value={editRating}
+                              onChange={(event) => setEditRating(event.target.value)}
+                              className="w-28 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor={`edit-comment-${review.id}`}
+                              className="mb-1 block text-sm font-medium text-gray-700"
+                            >
+                              Comment
+                            </label>
+                            <textarea
+                              id={`edit-comment-${review.id}`}
+                              value={editComment}
+                              onChange={(event) => setEditComment(event.target.value)}
+                              className="min-h-24 w-full rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => saveReview(review.id)}
+                              disabled={isSaving}
+                              className="rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:bg-orange-300"
+                            >
+                              {isSaving ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditingReview}
+                              disabled={isSaving}
+                              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:text-gray-400"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mt-3 text-gray-700">{review.comment}</p>
+                          {canManageReview && (
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => startEditingReview(review)}
+                                className="rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteReview(review.id)}
+                                disabled={isDeleting}
+                                className="rounded border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:text-red-300"
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </article>
                   );
                 })}

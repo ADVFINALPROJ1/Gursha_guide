@@ -9,7 +9,7 @@ function requireLogin(req, res, next) {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Please login to submit a review" });
+    return res.status(401).json({ message: "Please login to continue" });
   }
 
   try {
@@ -80,6 +80,97 @@ router.post("/", requireLogin, async (req, res) => {
   } catch (error) {
     console.error("Error submitting review:", error);
     res.status(500).json({ message: "Server error while submitting review" });
+  }
+});
+
+router.put("/:id", requireLogin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    if (!rating || !comment) {
+      return res.status(400).json({ message: "Rating and comment are required" });
+    }
+
+    const ratingNumber = Number(rating);
+
+    if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    const trimmedComment = comment.trim();
+
+    if (!trimmedComment) {
+      return res.status(400).json({ message: "Comment is required" });
+    }
+
+    const savedRating = Math.round(ratingNumber * 10) / 10;
+
+    const result = await pool.query(
+      `UPDATE reviews
+       SET rating = $1, comment = $2
+       WHERE id = $3
+         AND ($4 = true OR user_id = $5)
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at`,
+      [savedRating, trimmedComment, id, isAdmin, userId]
+    );
+
+    if (result.rows.length === 0) {
+      const existingReview = await pool.query(
+        "SELECT id FROM reviews WHERE id = $1",
+        [id]
+      );
+
+      if (existingReview.rows.length === 0) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      return res.status(403).json({ message: "You can only edit your own review" });
+    }
+
+    res.json({
+      message: "Review updated successfully",
+      review: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating review:", error);
+    res.status(500).json({ message: "Server error while updating review" });
+  }
+});
+
+router.delete("/:id", requireLogin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    const result = await pool.query(
+      `DELETE FROM reviews
+       WHERE id = $1
+         AND ($2 = true OR user_id = $3)
+       RETURNING id`,
+      [id, isAdmin, userId]
+    );
+
+    if (result.rows.length === 0) {
+      const existingReview = await pool.query(
+        "SELECT id FROM reviews WHERE id = $1",
+        [id]
+      );
+
+      if (existingReview.rows.length === 0) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      return res.status(403).json({ message: "You can only delete your own review" });
+    }
+
+    res.json({ message: "Review deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    res.status(500).json({ message: "Server error while deleting review" });
   }
 });
 
