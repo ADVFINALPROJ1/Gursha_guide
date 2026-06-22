@@ -1,7 +1,7 @@
 import { useState } from "react";
 import API from "../services/api";
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -20,8 +20,11 @@ export default function LoginPage() {
         password,
       });
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.setItem("token", response.data.token);
+      sessionStorage.setItem("user", JSON.stringify(response.data.user));
+      onLogin?.(response.data.user);
 
       setMessage(response.data.message || "Login successful");
       setPhoneNumber("");

@@ -37,7 +37,7 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
     setMessage("");
     setError("");
 
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (!token) {
       setError("Please login or register before submitting a review.");
