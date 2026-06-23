@@ -6,6 +6,8 @@ import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import AddRestaurantPage from "./pages/AddRestaurantPage";
 import AdminRestaurantsPage from "./pages/AdminRestaurantsPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 function getSessionUser() {
   try {
@@ -42,6 +44,8 @@ function App() {
             {currentUser?.role === "admin" && (
               <>
                 <Link to="/admin/restaurants">Manage Restaurants</Link>
+                <Link to="/admin/reports">Reported Reviews</Link>
+                <Link to="/admin/users">Manage Users</Link>
                 <Link to="/admin/add-restaurant">Add Restaurant</Link>
               </>
             )}
@@ -75,6 +79,8 @@ function App() {
           <Route path="/" element={<RestaurantListPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
           <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
+          <Route path="/admin/reports" element={<AdminReportsPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/add-restaurant" element={<AddRestaurantPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />

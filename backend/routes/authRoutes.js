@@ -60,6 +60,18 @@ router.post("/login", async (req, res) => {
 
     const user = result.rows[0];
 
+    const suspendedUntil = user.suspended_until
+      ? new Date(user.suspended_until)
+      : null;
+
+    if (user.suspended_permanent || (suspendedUntil && suspendedUntil > new Date())) {
+      return res.status(403).json({
+        message: user.suspended_permanent
+          ? "This account is permanently suspended"
+          : `This account is suspended until ${suspendedUntil.toLocaleDateString()}`,
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {

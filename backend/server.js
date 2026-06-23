@@ -4,6 +4,8 @@ require("dotenv").config();
 
 const restaurantRoutes = require("./routes/restaurantRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -16,6 +18,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/users", userRoutes);
 
 const PORT = process.env.PORT || 5002;
 
