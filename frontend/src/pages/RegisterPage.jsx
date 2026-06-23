@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,6 +16,12 @@ export default function RegisterPage() {
     event.preventDefault();
     setMessage("");
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -26,6 +35,8 @@ export default function RegisterPage() {
       setFullName("");
       setPhoneNumber("");
       setPassword("");
+      setConfirmPassword("");
+      navigate("/login");
     } catch (err) {
       const errorMessage =
         err.response?.data?.message  || "Registration failed. Please try again.";
@@ -108,6 +119,24 @@ export default function RegisterPage() {
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
               placeholder="Enter password"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="mb-1 block font-medium text-gray-700"
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
+              placeholder="Confirm password"
               required
             />
           </div>
