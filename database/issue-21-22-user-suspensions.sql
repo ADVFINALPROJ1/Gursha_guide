@@ -1,0 +1,4 @@
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMP,
+ADD COLUMN IF NOT EXISTS suspended_permanent BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS suspension_reason TEXT;

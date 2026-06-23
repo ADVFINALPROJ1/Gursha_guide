@@ -62,6 +62,9 @@ export default function RestaurantDetailPage() {
   const [reviewActionError, setReviewActionError] = useState("");
   const [savingReviewId, setSavingReviewId] = useState(null);
   const [deletingReviewId, setDeletingReviewId] = useState(null);
+  const [reportingReviewId, setReportingReviewId] = useState(null);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReportId, setSubmittingReportId] = useState(null);
 
   const getRestaurant = useCallback(async () => {
     try {
@@ -208,6 +211,47 @@ export default function RestaurantDetailPage() {
       );
     } finally {
       setDeletingReviewId(null);
+    }
+  }
+
+  function startReportingReview(reviewId) {
+    setReportingReviewId(reviewId);
+    setReportReason("");
+    setReviewActionMessage("");
+    setReviewActionError("");
+  }
+
+  function cancelReportingReview() {
+    setReportingReviewId(null);
+    setReportReason("");
+    setReviewActionError("");
+  }
+
+  async function submitReport(reviewId) {
+    setReviewActionMessage("");
+    setReviewActionError("");
+
+    if (!reportReason.trim()) {
+      setReviewActionError("Report reason is required.");
+      return;
+    }
+
+    setSubmittingReportId(reviewId);
+
+    try {
+      await API.post("/reports", {
+        reviewId,
+        reason: reportReason,
+      });
+      setReviewActionMessage("Review reported successfully.");
+      setReportingReviewId(null);
+      setReportReason("");
+    } catch (err) {
+      setReviewActionError(
+        err.response?.data?.message || "Could not report review. Please try again."
+      );
+    } finally {
+      setSubmittingReportId(null);
     }
   }
 
@@ -381,6 +425,8 @@ export default function RestaurantDetailPage() {
                   const isEditing = editingReviewId === review.id;
                   const isSaving = savingReviewId === review.id;
                   const isDeleting = deletingReviewId === review.id;
+                  const isReporting = reportingReviewId === review.id;
+                  const isSubmittingReport = submittingReportId === review.id;
 
                   return (
                     <article
@@ -478,8 +524,53 @@ export default function RestaurantDetailPage() {
                       ) : (
                         <>
                           <p className="mt-3 text-gray-700">{review.comment}</p>
-                          {(canEditReview || canDeleteReview) && (
+                          {isReporting ? (
+                            <div className="mt-4 space-y-3">
+                              <div>
+                                <label
+                                  htmlFor={`report-reason-${review.id}`}
+                                  className="mb-1 block text-sm font-medium text-gray-700"
+                                >
+                                  Report reason
+                                </label>
+                                <textarea
+                                  id={`report-reason-${review.id}`}
+                                  value={reportReason}
+                                  onChange={(event) =>
+                                    setReportReason(event.target.value)
+                                  }
+                                  className="min-h-20 w-full rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                                  placeholder="Why are you reporting this review?"
+                                />
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => submitReport(review.id)}
+                                  disabled={isSubmittingReport}
+                                  className="rounded bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:bg-orange-300"
+                                >
+                                  {isSubmittingReport ? "Reporting..." : "Submit Report"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelReportingReview}
+                                  disabled={isSubmittingReport}
+                                  className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:text-gray-400"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
                             <div className="mt-4 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => startReportingReview(review.id)}
+                                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                              >
+                                Report
+                              </button>
                               {canEditReview && (
                                 <button
                                   type="button"
