@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 export default function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -29,6 +31,7 @@ export default function LoginPage({ onLogin }) {
       setMessage(response.data.message || "Login successful");
       setPhoneNumber("");
       setPassword("");
+      navigate("/");
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || "Login failed. Please try again.";
