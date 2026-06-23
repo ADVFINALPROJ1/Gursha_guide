@@ -25,6 +25,14 @@ function RatingStars({ rating }) {
   );
 }
 
+function getSessionUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem("user"));
+  } catch {
+    return null;
+  }
+}
+
 export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
   const [rating, setRating] = useState("4.0");
   const [comment, setComment] = useState("");
@@ -38,9 +46,15 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
     setError("");
 
     const token = sessionStorage.getItem("token");
+    const savedUser = token ? getSessionUser() : null;
 
     if (!token) {
       setError("Please login or register before submitting a review.");
+      return;
+    }
+
+    if (savedUser?.role === "admin") {
+      setError("Admins cannot submit reviews.");
       return;
     }
 

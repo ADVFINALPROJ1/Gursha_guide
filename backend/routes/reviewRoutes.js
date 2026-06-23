@@ -46,6 +46,10 @@ router.post("/", requireLogin, async (req, res) => {
     const { restaurantId, rating, comment } = req.body;
     const userId = req.user.id;
 
+    if (req.user.role === "admin") {
+      return res.status(403).json({ message: "Admins cannot submit reviews" });
+    }
+
     if (!restaurantId || !rating || !comment) {
       return res.status(400).json({
         message: "Restaurant, rating, and comment are required",
@@ -88,7 +92,10 @@ router.put("/:id", requireLogin, async (req, res) => {
     const { id } = req.params;
     const { rating, comment } = req.body;
     const userId = req.user.id;
-    const isAdmin = req.user.role === "admin";
+
+    if (req.user.role === "admin") {
+      return res.status(403).json({ message: "Admins cannot edit reviews" });
+    }
 
     if (!rating || !comment) {
       return res.status(400).json({ message: "Rating and comment are required" });
@@ -112,9 +119,9 @@ router.put("/:id", requireLogin, async (req, res) => {
       `UPDATE reviews
        SET rating = $1, comment = $2
        WHERE id = $3
-         AND ($4 = true OR user_id = $5)
+         AND user_id = $4
        RETURNING id, user_id, restaurant_id, rating, comment, created_at`,
-      [savedRating, trimmedComment, id, isAdmin, userId]
+      [savedRating, trimmedComment, id, userId]
     );
 
     if (result.rows.length === 0) {

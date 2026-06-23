@@ -71,6 +71,78 @@ router.post("/", requireAdmin, async (req, res) => {
   }
 });
 
+router.put("/:id", requireAdmin, async (req, res) => {
+  try {
+    const restaurantId = req.params.id;
+    const { name, location, description } = req.body;
+    const imageUrl = req.body.imageUrl || req.body.image_url || "";
+
+    if (!name?.trim() || !location?.trim()) {
+      return res.status(400).json({ message: "Name and location are required" });
+    }
+
+    const result = await pool.query(
+      `UPDATE restaurants
+       SET name = $1, location = $2, description = $3, image_url = $4
+       WHERE id = $5
+       RETURNING id, name, location, description, image_url, created_at`,
+      [
+        name.trim(),
+        location.trim(),
+        description || "",
+        imageUrl.trim(),
+        restaurantId,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    res.json({
+      message: "Restaurant updated successfully",
+      restaurant: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating restaurant:", error);
+    res.status(500).json({ message: "Server error while updating restaurant" });
+  }
+});
+
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const restaurantId = req.params.id;
+
+    await client.query("BEGIN");
+
+    const existingRestaurant = await client.query(
+      "SELECT id FROM restaurants WHERE id = $1",
+      [restaurantId]
+    );
+
+    if (existingRestaurant.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    await client.query("DELETE FROM reviews WHERE restaurant_id = $1", [
+      restaurantId,
+    ]);
+    await client.query("DELETE FROM restaurants WHERE id = $1", [restaurantId]);
+    await client.query("COMMIT");
+
+    res.json({ message: "Restaurant deleted successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting restaurant:", error);
+    res.status(500).json({ message: "Server error while deleting restaurant" });
+  } finally {
+    client.release();
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const restaurantId = req.params.id;
