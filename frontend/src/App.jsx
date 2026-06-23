@@ -5,6 +5,7 @@ import RestaurantDetailPage from "./pages/RestaurantDetailPage";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import AddRestaurantPage from "./pages/AddRestaurantPage";
+import AdminRestaurantsPage from "./pages/AdminRestaurantsPage";
 
 function getSessionUser() {
   try {
@@ -39,7 +40,10 @@ function App() {
           <div className="flex flex-wrap gap-4 font-semibold">
             <Link to="/">Restaurants</Link>
             {currentUser?.role === "admin" && (
-              <Link to="/admin/add-restaurant">Add Restaurant</Link>
+              <>
+                <Link to="/admin/restaurants">Manage Restaurants</Link>
+                <Link to="/admin/add-restaurant">Add Restaurant</Link>
+              </>
             )}
           </div>
 
@@ -70,6 +74,7 @@ function App() {
         <Routes>
           <Route path="/" element={<RestaurantListPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
+          <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
           <Route path="/admin/add-restaurant" element={<AddRestaurantPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />

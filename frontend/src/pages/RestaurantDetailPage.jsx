@@ -375,7 +375,8 @@ export default function RestaurantDetailPage() {
               <div className="mt-5 grid gap-4">
                 {reviews.map((review) => {
                   const isMyReview = currentUserId && Number(review.user_id) === Number(currentUserId);
-                  const canManageReview = isMyReview || isAdmin;
+                  const canEditReview = isMyReview;
+                  const canDeleteReview = isMyReview || isAdmin;
                   const reviewRating = Number(review.rating).toFixed(1);
                   const isEditing = editingReviewId === review.id;
                   const isSaving = savingReviewId === review.id;
@@ -419,7 +420,7 @@ export default function RestaurantDetailPage() {
                         </div>
                       </div>
 
-                      {isEditing && canManageReview ? (
+                      {isEditing && canEditReview ? (
                         <div className="mt-4 space-y-4">
                           <div>
                             <label
@@ -477,23 +478,27 @@ export default function RestaurantDetailPage() {
                       ) : (
                         <>
                           <p className="mt-3 text-gray-700">{review.comment}</p>
-                          {canManageReview && (
+                          {(canEditReview || canDeleteReview) && (
                             <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => startEditingReview(review)}
-                                className="rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deleteReview(review.id)}
-                                disabled={isDeleting}
-                                className="rounded border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:text-red-300"
-                              >
-                                {isDeleting ? "Deleting..." : "Delete"}
-                              </button>
+                              {canEditReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => startEditingReview(review)}
+                                  className="rounded border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {canDeleteReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteReview(review.id)}
+                                  disabled={isDeleting}
+                                  className="rounded border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:text-red-300"
+                                >
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </button>
+                              )}
                             </div>
                           )}
                         </>
@@ -505,22 +510,26 @@ export default function RestaurantDetailPage() {
             )}
           </div>
 
-          <div className="mt-8 border-t pt-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Write a Review</h2>
-              <p className="mt-1 text-gray-600">
-                Share your experience at this restaurant.
-              </p>
-            </div>
+          {!isAdmin && (
+            <div className="mt-8 border-t pt-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Write a Review
+                </h2>
+                <p className="mt-1 text-gray-600">
+                  Share your experience at this restaurant.
+                </p>
+              </div>
 
-            <ReviewForm
-              restaurantId={id}
-              onReviewSubmitted={() => {
-                getRestaurant();
-                getReviews();
-              }}
-            />
-          </div>
+              <ReviewForm
+                restaurantId={id}
+                onReviewSubmitted={() => {
+                  getRestaurant();
+                  getReviews();
+                }}
+              />
+            </div>
+          )}
         </div>
       </section>
     </main>

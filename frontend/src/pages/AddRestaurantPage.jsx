@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import API from "../services/api";
 
 export default function AddRestaurantPage() {
-  const savedUser = JSON.parse(localStorage.getItem("user"));
-  const token = localStorage.getItem("token");
+  const savedUser = JSON.parse(sessionStorage.getItem("user"));
+  const token = sessionStorage.getItem("token");
   const isAdmin = savedUser?.role === "admin";
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
