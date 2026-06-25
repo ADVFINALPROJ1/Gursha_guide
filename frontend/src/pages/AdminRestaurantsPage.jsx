@@ -22,6 +22,8 @@ export default function AdminRestaurantsPage() {
     location: "",
     description: "",
     imageUrl: "",
+    latitude: "",
+    longitude: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -50,6 +52,8 @@ export default function AdminRestaurantsPage() {
       location: restaurant.location || "",
       description: restaurant.description || "",
       imageUrl: restaurant.image_url || "",
+      latitude: restaurant.latitude || "",
+      longitude: restaurant.longitude || "",
     });
     setMessage("");
     setError("");
@@ -62,6 +66,8 @@ export default function AdminRestaurantsPage() {
       location: "",
       description: "",
       imageUrl: "",
+      latitude: "",
+      longitude: "",
     });
     setError("");
   }
@@ -292,6 +298,46 @@ export default function AdminRestaurantsPage() {
                         />
                       </div>
 
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label
+                            htmlFor={`latitude-${restaurant.id}`}
+                            className="mb-1 block font-medium text-gray-700"
+                          >
+                            Latitude
+                          </label>
+                          <input
+                            id={`latitude-${restaurant.id}`}
+                            type="number"
+                            step="0.0000001"
+                            value={formData.latitude}
+                            onChange={(event) =>
+                              updateField("latitude", event.target.value)
+                            }
+                            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`longitude-${restaurant.id}`}
+                            className="mb-1 block font-medium text-gray-700"
+                          >
+                            Longitude
+                          </label>
+                          <input
+                            id={`longitude-${restaurant.id}`}
+                            type="number"
+                            step="0.0000001"
+                            value={formData.longitude}
+                            onChange={(event) =>
+                              updateField("longitude", event.target.value)
+                            }
+                            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -326,6 +372,11 @@ export default function AdminRestaurantsPage() {
                         {restaurant.image_url && (
                           <p className="mt-2 break-all text-sm text-gray-500">
                             {restaurant.image_url}
+                          </p>
+                        )}
+                        {restaurant.latitude && restaurant.longitude && (
+                          <p className="mt-2 text-sm text-gray-500">
+                            Coordinates: {restaurant.latitude}, {restaurant.longitude}
                           </p>
                         )}
                       </div>
