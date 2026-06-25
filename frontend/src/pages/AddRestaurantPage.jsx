@@ -10,6 +10,8 @@ export default function AddRestaurantPage() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,8 @@ export default function AddRestaurantPage() {
           location,
           description,
           imageUrl,
+          latitude,
+          longitude,
         },
         {
           headers: {
@@ -52,6 +56,8 @@ export default function AddRestaurantPage() {
       setLocation("");
       setDescription("");
       setImageUrl("");
+      setLatitude("");
+      setLongitude("");
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || "Could not add restaurant. Please try again.";
@@ -162,6 +168,44 @@ export default function AddRestaurantPage() {
               className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
               placeholder="https://example.com/restaurant.jpg"
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="latitude"
+                className="mb-1 block font-medium text-gray-700"
+              >
+                Latitude
+              </label>
+              <input
+                id="latitude"
+                type="number"
+                step="0.0000001"
+                value={latitude}
+                onChange={(event) => setLatitude(event.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
+                placeholder="9.0300"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="longitude"
+                className="mb-1 block font-medium text-gray-700"
+              >
+                Longitude
+              </label>
+              <input
+                id="longitude"
+                type="number"
+                step="0.0000001"
+                value={longitude}
+                onChange={(event) => setLongitude(event.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
+                placeholder="38.7400"
+              />
+            </div>
           </div>
 
           <button

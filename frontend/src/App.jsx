@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import RestaurantListPage from "./pages/RestaurantListPage";
 import RestaurantDetailPage from "./pages/RestaurantDetailPage";
+import NearbyRestaurantsPage from "./pages/NearbyRestaurantsPage";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import AddRestaurantPage from "./pages/AddRestaurantPage";
@@ -41,6 +42,7 @@ function App() {
         <nav className="flex flex-wrap items-center justify-between gap-4 bg-orange-600 p-4 text-white">
           <div className="flex flex-wrap gap-4 font-semibold">
             <Link to="/">Restaurants</Link>
+            <Link to="/nearby">Near Me</Link>
             {currentUser?.role === "admin" && (
               <>
                 <Link to="/admin/restaurants">Manage Restaurants</Link>
@@ -77,6 +79,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={<RestaurantListPage />} />
+          <Route path="/nearby" element={<NearbyRestaurantsPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
           <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
