@@ -422,6 +422,7 @@ export default function RestaurantDetailPage() {
                   const canEditReview = isMyReview;
                   const canDeleteReview = isMyReview || isAdmin;
                   const reviewRating = Number(review.rating).toFixed(1);
+                  const isVerified = review.is_verified === true;
                   const isEditing = editingReviewId === review.id;
                   const isSaving = savingReviewId === review.id;
                   const isDeleting = deletingReviewId === review.id;
@@ -448,6 +449,15 @@ export default function RestaurantDetailPage() {
                                 Your review
                               </span>
                             )}
+                            <span
+                              className={`rounded px-2 py-1 text-xs font-bold ${
+                                isVerified
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {isVerified ? "Verified" : "Not Verified"}
+                            </span>
                           </div>
                           {review.created_at && (
                             <p className="mt-1 text-sm text-gray-500">
