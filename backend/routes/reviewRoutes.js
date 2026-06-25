@@ -25,7 +25,8 @@ router.get("/restaurant/:restaurantId", async (req, res) => {
     const { restaurantId } = req.params;
 
     const result = await pool.query(
-      `SELECT reviews.id, reviews.user_id, reviews.rating, reviews.comment, reviews.created_at,
+      `SELECT reviews.id, reviews.user_id, reviews.rating, reviews.comment,
+              reviews.created_at, reviews.is_verified,
               users.full_name AS reviewer_name
        FROM reviews
        LEFT JOIN users ON reviews.user_id = users.id
@@ -73,7 +74,7 @@ router.post("/", requireLogin, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO reviews (user_id, restaurant_id, rating, comment)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, user_id, restaurant_id, rating, comment, created_at`,
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at, is_verified`,
       [userId, restaurantId, savedRating, trimmedComment]
     );
 
@@ -120,7 +121,7 @@ router.put("/:id", requireLogin, async (req, res) => {
        SET rating = $1, comment = $2
        WHERE id = $3
          AND user_id = $4
-       RETURNING id, user_id, restaurant_id, rating, comment, created_at`,
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at, is_verified`,
       [savedRating, trimmedComment, id, userId]
     );
 
