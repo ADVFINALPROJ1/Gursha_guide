@@ -65,6 +65,7 @@ export default function RestaurantDetailPage() {
   const [reportingReviewId, setReportingReviewId] = useState(null);
   const [reportReason, setReportReason] = useState("");
   const [submittingReportId, setSubmittingReportId] = useState(null);
+  const [votingReviewId, setVotingReviewId] = useState(null);
 
   const getRestaurant = useCallback(async () => {
     try {
@@ -85,7 +86,15 @@ export default function RestaurantDetailPage() {
 
   const getReviews = useCallback(async () => {
     try {
-      const response = await API.get(`/reviews/restaurant/${id}`);
+      const token = sessionStorage.getItem("token");
+      const requestOptions = token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        : {};
+      const response = await API.get(`/reviews/restaurant/${id}`, requestOptions);
       setReviews(response.data);
       setReviewsError("");
     } catch {
@@ -252,6 +261,49 @@ export default function RestaurantDetailPage() {
       );
     } finally {
       setSubmittingReportId(null);
+    }
+  }
+
+  async function voteOnReview(reviewId, voteType) {
+    setReviewActionMessage("");
+    setReviewActionError("");
+
+    if (!token) {
+      setReviewActionError("Please login before voting on a review.");
+      return;
+    }
+
+    setVotingReviewId(`${reviewId}-${voteType}`);
+
+    try {
+      const response = await API.patch(
+        `/reviews/${reviewId}/${voteType}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          review.id === reviewId
+            ? {
+                ...review,
+                upvotes: response.data.upvotes,
+                downvotes: response.data.downvotes,
+                user_vote: response.data.user_vote,
+              }
+            : review
+        )
+      );
+    } catch (err) {
+      setReviewActionError(
+        err.response?.data?.message || "Could not save vote. Please try again."
+      );
+    } finally {
+      setVotingReviewId(null);
     }
   }
 
@@ -428,6 +480,11 @@ export default function RestaurantDetailPage() {
                   const isDeleting = deletingReviewId === review.id;
                   const isReporting = reportingReviewId === review.id;
                   const isSubmittingReport = submittingReportId === review.id;
+                  const upvoteCount = Number(review.upvotes || 0);
+                  const downvoteCount = Number(review.downvotes || 0);
+                  const upvoteLoading = votingReviewId === `${review.id}-upvote`;
+                  const downvoteLoading = votingReviewId === `${review.id}-downvote`;
+                  const hasVoted = Boolean(review.user_vote);
 
                   return (
                     <article
@@ -534,6 +591,38 @@ export default function RestaurantDetailPage() {
                       ) : (
                         <>
                           <p className="mt-3 text-gray-700">{review.comment}</p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => voteOnReview(review.id, "upvote")}
+                              disabled={Boolean(votingReviewId) || hasVoted}
+                              aria-label={`Upvote review. Current upvotes: ${upvoteCount}`}
+                              title="Upvote"
+                              className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold hover:bg-green-50 disabled:text-green-300 ${
+                                review.user_vote === "upvote"
+                                  ? "border-green-300 bg-green-50 text-green-700"
+                                  : "border-green-200 bg-white text-green-700"
+                              }`}
+                            >
+                              <span aria-hidden="true">👍</span>
+                              <span>{upvoteLoading ? "..." : upvoteCount}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => voteOnReview(review.id, "downvote")}
+                              disabled={Boolean(votingReviewId) || hasVoted}
+                              aria-label={`Downvote review. Current downvotes: ${downvoteCount}`}
+                              title="Downvote"
+                              className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold hover:bg-gray-50 disabled:text-gray-400 ${
+                                review.user_vote === "downvote"
+                                  ? "border-gray-400 bg-gray-100 text-gray-800"
+                                  : "border-gray-300 bg-white text-gray-700"
+                              }`}
+                            >
+                              <span aria-hidden="true">👎</span>
+                              <span>{downvoteLoading ? "..." : downvoteCount}</span>
+                            </button>
+                          </div>
                           {isReporting ? (
                             <div className="mt-4 space-y-3">
                               <div>

@@ -20,19 +20,41 @@ function requireLogin(req, res, next) {
   }
 }
 
+function getOptionalUser(req) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
 router.get("/restaurant/:restaurantId", async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const user = getOptionalUser(req);
+    const userId = user?.id || null;
 
     const result = await pool.query(
       `SELECT reviews.id, reviews.user_id, reviews.rating, reviews.comment,
               reviews.created_at, reviews.is_verified,
+              reviews.upvotes, reviews.downvotes,
+              review_votes.vote_type AS user_vote,
               users.full_name AS reviewer_name
        FROM reviews
        LEFT JOIN users ON reviews.user_id = users.id
+       LEFT JOIN review_votes
+         ON review_votes.review_id = reviews.id
+        AND review_votes.user_id = $2
        WHERE reviews.restaurant_id = $1
        ORDER BY reviews.created_at DESC`,
-      [restaurantId]
+      [restaurantId, userId]
     );
 
     res.json(result.rows);
@@ -74,7 +96,8 @@ router.post("/", requireLogin, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO reviews (user_id, restaurant_id, rating, comment)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, user_id, restaurant_id, rating, comment, created_at, is_verified`,
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at,
+                 is_verified, upvotes, downvotes`,
       [userId, restaurantId, savedRating, trimmedComment]
     );
 
@@ -85,6 +108,116 @@ router.post("/", requireLogin, async (req, res) => {
   } catch (error) {
     console.error("Error submitting review:", error);
     res.status(500).json({ message: "Server error while submitting review" });
+  }
+});
+
+router.patch("/:id/upvote", requireLogin, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    await client.query("BEGIN");
+
+    const existingReview = await client.query(
+      "SELECT id FROM reviews WHERE id = $1",
+      [id]
+    );
+
+    if (existingReview.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    await client.query(
+      `INSERT INTO review_votes (review_id, user_id, vote_type)
+       VALUES ($1, $2, 'upvote')`,
+      [id, userId]
+    );
+
+    const result = await client.query(
+      `UPDATE reviews
+       SET upvotes = COALESCE(upvotes, 0) + 1
+       WHERE id = $1
+       RETURNING upvotes, downvotes`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Review upvoted successfully",
+      upvotes: result.rows[0].upvotes,
+      downvotes: result.rows[0].downvotes,
+      user_vote: "upvote",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    if (error.code === "23505") {
+      return res.status(400).json({ message: "You already voted on this review" });
+    }
+
+    console.error("Error upvoting review:", error);
+    res.status(500).json({ message: "Server error while upvoting review" });
+  } finally {
+    client.release();
+  }
+});
+
+router.patch("/:id/downvote", requireLogin, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    await client.query("BEGIN");
+
+    const existingReview = await client.query(
+      "SELECT id FROM reviews WHERE id = $1",
+      [id]
+    );
+
+    if (existingReview.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    await client.query(
+      `INSERT INTO review_votes (review_id, user_id, vote_type)
+       VALUES ($1, $2, 'downvote')`,
+      [id, userId]
+    );
+
+    const result = await client.query(
+      `UPDATE reviews
+       SET downvotes = COALESCE(downvotes, 0) + 1
+       WHERE id = $1
+       RETURNING upvotes, downvotes`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Review downvoted successfully",
+      upvotes: result.rows[0].upvotes,
+      downvotes: result.rows[0].downvotes,
+      user_vote: "downvote",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    if (error.code === "23505") {
+      return res.status(400).json({ message: "You already voted on this review" });
+    }
+
+    console.error("Error downvoting review:", error);
+    res.status(500).json({ message: "Server error while downvoting review" });
+  } finally {
+    client.release();
   }
 });
 
@@ -121,7 +254,8 @@ router.put("/:id", requireLogin, async (req, res) => {
        SET rating = $1, comment = $2
        WHERE id = $3
          AND user_id = $4
-       RETURNING id, user_id, restaurant_id, rating, comment, created_at, is_verified`,
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at,
+                 is_verified, upvotes, downvotes`,
       [savedRating, trimmedComment, id, userId]
     );
 
