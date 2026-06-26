@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import API from "../services/api";
 
 function RatingStars({ rating }) {
@@ -33,12 +33,52 @@ function getSessionUser() {
   }
 }
 
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read image file"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
   const [rating, setRating] = useState("4.0");
   const [comment, setComment] = useState("");
+  const [reviewImage, setReviewImage] = useState(null);
+  const [receiptImage, setReceiptImage] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const reviewImageInputRef = useRef(null);
+  const receiptImageInputRef = useRef(null);
+
+  function chooseImage(file, setImage) {
+    if (!file) {
+      setImage(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      setImage(null);
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      setError("Please choose an image smaller than 1 MB.");
+      setImage(null);
+      return;
+    }
+
+    setError("");
+    setImage(file);
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -71,12 +111,17 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
     setLoading(true);
 
     try {
+      const reviewImageData = await readImageFile(reviewImage);
+      const receiptImageData = await readImageFile(receiptImage);
+
       await API.post(
         "/reviews",
         {
           restaurantId,
           rating: Number(rating),
           comment,
+          imageUrl: reviewImageData,
+          receiptUrl: receiptImageData,
         },
         {
           headers: {
@@ -88,6 +133,14 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
       setMessage("Review submitted successfully.");
       setRating("4.0");
       setComment("");
+      setReviewImage(null);
+      setReceiptImage(null);
+      if (reviewImageInputRef.current) {
+        reviewImageInputRef.current.value = "";
+      }
+      if (receiptImageInputRef.current) {
+        receiptImageInputRef.current.value = "";
+      }
       onReviewSubmitted?.();
     } catch (err) {
       const errorMessage =
@@ -162,6 +215,63 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
           placeholder="Share your restaurant experience"
           required
         />
+      </div>
+
+      <div>
+        <label
+          htmlFor="review-image"
+          className="mb-1 block font-medium text-gray-700"
+        >
+          Review Image
+        </label>
+        <input
+          id="review-image"
+          ref={reviewImageInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) =>
+            chooseImage(event.target.files?.[0], setReviewImage)
+          }
+          className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
+        />
+        <p className="mt-1 text-sm text-gray-500">
+          Review image is optional. Use an image smaller than 1 MB.
+        </p>
+        {reviewImage && (
+          <p className="mt-1 text-sm font-medium text-gray-600">
+            Selected: {reviewImage.name}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label
+          htmlFor="receipt-image"
+          className="mb-1 block font-medium text-gray-700"
+        >
+          Receipt Image
+        </label>
+        <input
+          id="receipt-image"
+          ref={receiptImageInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) =>
+            chooseImage(event.target.files?.[0], setReceiptImage)
+          }
+          className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
+        />
+        <p className="mt-1 text-sm text-gray-500">
+          Receipt is optional and can be used for verification later. Use an image
+          smaller than 1 MB.
+        </p>
+        {receiptImage && (
+          <p className="mt-1 text-sm font-medium text-gray-600">
+            Selected: {receiptImage.name}
+          </p>
+        )}
       </div>
 
       <button

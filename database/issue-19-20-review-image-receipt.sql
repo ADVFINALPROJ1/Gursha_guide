@@ -1,0 +1,8 @@
+ALTER TABLE reviews
+ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+ALTER TABLE reviews
+ADD COLUMN IF NOT EXISTS receipt_url TEXT;
+
+ALTER TABLE reviews
+ADD COLUMN IF NOT EXISTS receipt_status VARCHAR(20) DEFAULT 'not_submitted';

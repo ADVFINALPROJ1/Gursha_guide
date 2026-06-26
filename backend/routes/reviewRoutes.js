@@ -45,6 +45,7 @@ router.get("/restaurant/:restaurantId", async (req, res) => {
       `SELECT reviews.id, reviews.user_id, reviews.rating, reviews.comment,
               reviews.created_at, reviews.is_verified,
               reviews.upvotes, reviews.downvotes,
+              reviews.image_url, reviews.receipt_url, reviews.receipt_status,
               review_votes.vote_type AS user_vote,
               users.full_name AS reviewer_name
        FROM reviews
@@ -67,6 +68,8 @@ router.get("/restaurant/:restaurantId", async (req, res) => {
 router.post("/", requireLogin, async (req, res) => {
   try {
     const { restaurantId, rating, comment } = req.body;
+    const imageUrl = req.body.imageUrl || req.body.image_url || "";
+    const receiptUrl = req.body.receiptUrl || req.body.receipt_url || "";
     const userId = req.user.id;
 
     if (req.user.role === "admin") {
@@ -88,17 +91,32 @@ router.post("/", requireLogin, async (req, res) => {
     const savedRating = Math.round(ratingNumber * 10) / 10;
 
     const trimmedComment = comment.trim();
+    const trimmedImageUrl = imageUrl.trim();
+    const trimmedReceiptUrl = receiptUrl.trim();
+    const receiptStatus = trimmedReceiptUrl ? "pending" : "not_submitted";
 
     if (!trimmedComment) {
       return res.status(400).json({ message: "Comment is required" });
     }
 
     const result = await pool.query(
-      `INSERT INTO reviews (user_id, restaurant_id, rating, comment)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO reviews (
+         user_id, restaurant_id, rating, comment,
+         image_url, receipt_url, receipt_status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, user_id, restaurant_id, rating, comment, created_at,
-                 is_verified, upvotes, downvotes`,
-      [userId, restaurantId, savedRating, trimmedComment]
+                 is_verified, upvotes, downvotes,
+                 image_url, receipt_url, receipt_status`,
+      [
+        userId,
+        restaurantId,
+        savedRating,
+        trimmedComment,
+        trimmedImageUrl || null,
+        trimmedReceiptUrl || null,
+        receiptStatus,
+      ]
     );
 
     res.status(201).json({
@@ -255,7 +273,8 @@ router.put("/:id", requireLogin, async (req, res) => {
        WHERE id = $3
          AND user_id = $4
        RETURNING id, user_id, restaurant_id, rating, comment, created_at,
-                 is_verified, upvotes, downvotes`,
+                 is_verified, upvotes, downvotes,
+                 image_url, receipt_url, receipt_status`,
       [savedRating, trimmedComment, id, userId]
     );
 
