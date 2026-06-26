@@ -46,6 +46,22 @@ function clearOldLoginStorage() {
   localStorage.removeItem("user");
 }
 
+function getReceiptStatusText(status) {
+  if (status === "pending") {
+    return "Pending receipt verification";
+  }
+
+  if (status === "approved") {
+    return "Receipt approved";
+  }
+
+  if (status === "rejected") {
+    return "Receipt rejected";
+  }
+
+  return "Receipt not submitted";
+}
+
 export default function RestaurantDetailPage() {
   const { id } = useParams();
   const [restaurant, setRestaurant] = useState(null);
@@ -485,6 +501,10 @@ export default function RestaurantDetailPage() {
                   const upvoteLoading = votingReviewId === `${review.id}-upvote`;
                   const downvoteLoading = votingReviewId === `${review.id}-downvote`;
                   const hasVoted = Boolean(review.user_vote);
+                  const reviewImageUrl = review.image_url?.trim();
+                  const receiptStatusText = getReceiptStatusText(
+                    review.receipt_status
+                  );
 
                   return (
                     <article
@@ -591,6 +611,16 @@ export default function RestaurantDetailPage() {
                       ) : (
                         <>
                           <p className="mt-3 text-gray-700">{review.comment}</p>
+                          {reviewImageUrl && (
+                            <img
+                              src={reviewImageUrl}
+                              alt="Review"
+                              className="mt-4 max-h-80 w-full rounded object-cover"
+                            />
+                          )}
+                          <p className="mt-3 rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700">
+                            {receiptStatusText}
+                          </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <button
                               type="button"
