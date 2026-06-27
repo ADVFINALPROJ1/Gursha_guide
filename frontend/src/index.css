@@ -4,3 +4,50 @@ body {
   margin: 0;
   min-width: 320px;
 }
+
+:where(button, a[class*="bg-"], a[class*="border"]) {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+:where(button, a[class*="bg-"], a[class*="border"]):not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.14);
+}
+
+:where(button, a[class*="bg-"], a[class*="border"]):not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 5px 14px rgb(15 23 42 / 0.12);
+}
+
+:where(button, a):focus-visible {
+  outline: 3px solid rgb(251 146 60 / 0.75);
+  outline-offset: 3px;
+}
+
+nav a,
+nav button {
+  border-radius: 6px;
+}
+
+nav a {
+  padding: 0.35rem 0.5rem;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+nav a:hover {
+  background-color: rgb(255 255 255 / 0.16);
+  transform: translateY(-1px);
+}
+
+nav a:active {
+  transform: scale(0.97);
+}
