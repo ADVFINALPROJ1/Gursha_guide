@@ -24,6 +24,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/gursha_guide
       JWT_SECRET: local_docker_jwt_secret_change_me
       CLIENT_URL: http://localhost:8080
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
     ports:
       - "5002:5002"
     depends_on:

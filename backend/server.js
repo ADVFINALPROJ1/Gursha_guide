@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const restaurantRoutes = require("./routes/restaurantRoutes");
@@ -9,6 +11,8 @@ const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 const defaultAllowedOrigins = [
   "http://localhost:5173",
@@ -20,6 +24,17 @@ const allowedOrigins = (process.env.CLIENT_URL || "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const apiLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Too many requests. Please try again later.",
+  },
+});
+
+app.use(helmet());
 app.use(
   cors({
     origin(origin, callback) {
@@ -35,6 +50,7 @@ app.use(
   })
 );
 app.use(express.json({ limit: "5mb" }));
+app.use("/api", apiLimiter);
 
 app.get("/", (req, res) => {
   res.send("GurshaGuide API is running");

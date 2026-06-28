@@ -9,6 +9,8 @@ PORT=5002
 DATABASE_URL=postgresql://user:password@host:5432/gursha_guide?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
 CLIENT_URL=https://your-frontend-domain.com
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 ```
 
 Use the database URL from the production PostgreSQL provider. Do not commit real secrets.
