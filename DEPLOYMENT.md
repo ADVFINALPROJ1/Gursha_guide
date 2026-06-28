@@ -33,6 +33,24 @@ psql "$DATABASE_URL" -f database/schema.sql
 
 The files in `database/issue-*.sql` are incremental scripts for older databases.
 
+## First Admin User
+
+Register a user through the app first, then promote that user in the database.
+
+For Docker local setup:
+
+```bash
+docker compose exec db psql -U postgres -d gursha_guide -c "UPDATE users SET role = 'admin' WHERE phone_number = 'YOUR_PHONE_NUMBER';"
+```
+
+For production:
+
+```bash
+psql "$DATABASE_URL" -c "UPDATE users SET role = 'admin' WHERE phone_number = 'YOUR_PHONE_NUMBER';"
+```
+
+See `database/admin-setup.md` for the full admin setup flow.
+
 ## Docker
 
 For a local containerized setup, run:
