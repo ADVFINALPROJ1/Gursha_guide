@@ -1,8 +1,60 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
 const pool = require("../config/db");
+const { cloudinary, hasCloudinaryConfig } = require("../config/cloudinary");
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+  fileFilter(req, file, callback) {
+    if (!file.mimetype.startsWith("image/")) {
+      return callback(new Error("Only image uploads are allowed"));
+    }
+
+    return callback(null, true);
+  },
+});
+
+function uploadToCloudinary(file, folder) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    stream.end(file.buffer);
+  });
+}
+
+function handleUploadError(error, req, res, next) {
+  if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ message: "Images must be 5 MB or smaller" });
+  }
+
+  if (error instanceof multer.MulterError && error.code === "LIMIT_UNEXPECTED_FILE") {
+    return res.status(400).json({ message: "Unexpected image upload field" });
+  }
+
+  if (error.message === "Only image uploads are allowed") {
+    return res.status(400).json({ message: error.message });
+  }
+
+  return next(error);
+}
 
 function requireLogin(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -65,69 +117,91 @@ router.get("/restaurant/:restaurantId", async (req, res) => {
   }
 });
 
-router.post("/", requireLogin, async (req, res) => {
-  try {
-    const { restaurantId, rating, comment } = req.body;
-    const imageUrl = req.body.imageUrl || req.body.image_url || "";
-    const receiptUrl = req.body.receiptUrl || req.body.receipt_url || "";
-    const userId = req.user.id;
+router.post(
+  "/",
+  requireLogin,
+  upload.fields([
+    { name: "reviewImage", maxCount: 1 },
+    { name: "receiptImage", maxCount: 1 },
+  ]),
+  handleUploadError,
+  async (req, res) => {
+    try {
+      const { restaurantId, rating, comment } = req.body;
+      const imageUrl = req.body.imageUrl || req.body.image_url || "";
+      const receiptUrl = req.body.receiptUrl || req.body.receipt_url || "";
+      const reviewImageFile = req.files?.reviewImage?.[0];
+      const receiptImageFile = req.files?.receiptImage?.[0];
+      const userId = req.user.id;
 
-    if (req.user.role === "admin") {
-      return res.status(403).json({ message: "Admins cannot submit reviews" });
-    }
+      if (req.user.role === "admin") {
+        return res.status(403).json({ message: "Admins cannot submit reviews" });
+      }
 
-    if (!restaurantId || !rating || !comment) {
-      return res.status(400).json({
-        message: "Restaurant, rating, and comment are required",
+      if (!restaurantId || !rating || !comment) {
+        return res.status(400).json({
+          message: "Restaurant, rating, and comment are required",
+        });
+      }
+
+      const ratingNumber = Number(rating);
+
+      if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
+        return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      }
+
+      const savedRating = Math.round(ratingNumber * 10) / 10;
+
+      const trimmedComment = comment.trim();
+
+      if (!trimmedComment) {
+        return res.status(400).json({ message: "Comment is required" });
+      }
+
+      if ((reviewImageFile || receiptImageFile) && !hasCloudinaryConfig()) {
+        return res.status(500).json({
+          message: "Image uploads are not configured on the server",
+        });
+      }
+
+      const uploadedImageUrl = reviewImageFile
+        ? await uploadToCloudinary(reviewImageFile, "gursha-guide/reviews")
+        : imageUrl.trim();
+      const uploadedReceiptUrl = receiptImageFile
+        ? await uploadToCloudinary(receiptImageFile, "gursha-guide/receipts")
+        : receiptUrl.trim();
+      const receiptStatus = uploadedReceiptUrl ? "pending" : "not_submitted";
+
+      const result = await pool.query(
+        `INSERT INTO reviews (
+           user_id, restaurant_id, rating, comment,
+           image_url, receipt_url, receipt_status
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, user_id, restaurant_id, rating, comment, created_at,
+                   is_verified, upvotes, downvotes,
+                   image_url, receipt_url, receipt_status`,
+        [
+          userId,
+          restaurantId,
+          savedRating,
+          trimmedComment,
+          uploadedImageUrl || null,
+          uploadedReceiptUrl || null,
+          receiptStatus,
+        ]
+      );
+
+      res.status(201).json({
+        message: "Review submitted successfully",
+        review: result.rows[0],
       });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      res.status(500).json({ message: "Server error while submitting review" });
     }
-
-    const ratingNumber = Number(rating);
-
-    if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
-    }
-
-    const savedRating = Math.round(ratingNumber * 10) / 10;
-
-    const trimmedComment = comment.trim();
-    const trimmedImageUrl = imageUrl.trim();
-    const trimmedReceiptUrl = receiptUrl.trim();
-    const receiptStatus = trimmedReceiptUrl ? "pending" : "not_submitted";
-
-    if (!trimmedComment) {
-      return res.status(400).json({ message: "Comment is required" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO reviews (
-         user_id, restaurant_id, rating, comment,
-         image_url, receipt_url, receipt_status
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, user_id, restaurant_id, rating, comment, created_at,
-                 is_verified, upvotes, downvotes,
-                 image_url, receipt_url, receipt_status`,
-      [
-        userId,
-        restaurantId,
-        savedRating,
-        trimmedComment,
-        trimmedImageUrl || null,
-        trimmedReceiptUrl || null,
-        receiptStatus,
-      ]
-    );
-
-    res.status(201).json({
-      message: "Review submitted successfully",
-      review: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Error submitting review:", error);
-    res.status(500).json({ message: "Server error while submitting review" });
   }
-});
+);
 
 router.patch("/:id/upvote", requireLogin, async (req, res) => {
   const client = await pool.connect();

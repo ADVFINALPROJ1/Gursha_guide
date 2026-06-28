@@ -9,9 +9,24 @@ PORT=5002
 DATABASE_URL=postgresql://user:password@host:5432/gursha_guide?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
 CLIENT_URL=https://your-frontend-domain.com
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 Use the database URL from the production PostgreSQL provider. Do not commit real secrets.
+
+## Image Uploads
+
+Review and receipt image uploads use Cloudinary. Create a Cloudinary account, then set these backend environment variables:
+
+```bash
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+```
+
+Uploaded review images are stored in the `gursha-guide/reviews` folder. Receipt images are stored in `gursha-guide/receipts`.
 
 ## Frontend Environment Variables
 
