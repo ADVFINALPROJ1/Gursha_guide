@@ -24,6 +24,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/gursha_guide}
       JWT_SECRET: ${JWT_SECRET:-local_docker_jwt_secret_change_me}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
++     CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
++     CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - "${BACKEND_PORT:-5002}:5002"
     depends_on:

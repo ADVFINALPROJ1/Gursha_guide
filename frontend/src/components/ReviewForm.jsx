@@ -33,20 +33,6 @@ function getSessionUser() {
   }
 }
 
-function readImageFile(file) {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve("");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Could not read image file"));
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
   const [rating, setRating] = useState("4.0");
   const [comment, setComment] = useState("");
@@ -70,8 +56,8 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
       return;
     }
 
-    if (file.size > 1024 * 1024) {
-      setError("Please choose an image smaller than 1 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Please choose an image smaller than 5 MB.");
       setImage(null);
       return;
     }
@@ -111,18 +97,22 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
     setLoading(true);
 
     try {
-      const reviewImageData = await readImageFile(reviewImage);
-      const receiptImageData = await readImageFile(receiptImage);
+      const formData = new FormData();
+      formData.append("restaurantId", restaurantId);
+      formData.append("rating", Number(rating));
+      formData.append("comment", comment);
+
+      if (reviewImage) {
+        formData.append("reviewImage", reviewImage);
+      }
+
+      if (receiptImage) {
+        formData.append("receiptImage", receiptImage);
+      }
 
       await API.post(
         "/reviews",
-        {
-          restaurantId,
-          rating: Number(rating),
-          comment,
-          imageUrl: reviewImageData,
-          receiptUrl: receiptImageData,
-        },
+        formData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -236,7 +226,7 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
           className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100"
         />
         <p className="mt-1 text-sm text-gray-500">
-          Review image is optional. Use an image smaller than 1 MB.
+          Review image is optional. Use an image smaller than 5 MB.
         </p>
         {reviewImage && (
           <p className="mt-1 text-sm font-medium text-gray-600">
@@ -265,7 +255,7 @@ export default function ReviewForm({ restaurantId, onReviewSubmitted }) {
         />
         <p className="mt-1 text-sm text-gray-500">
           Receipt is optional and can be used for verification later. Use an image
-          smaller than 1 MB.
+          smaller than 5 MB.
         </p>
         {receiptImage && (
           <p className="mt-1 text-sm font-medium text-gray-600">
