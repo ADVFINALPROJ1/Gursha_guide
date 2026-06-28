@@ -2,11 +2,11 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: gursha_guide
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-gursha_guide}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -20,12 +20,12 @@ services:
     build:
       context: ./backend
     environment:
-      PORT: 5002
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/gursha_guide
-      JWT_SECRET: local_docker_jwt_secret_change_me
-      CLIENT_URL: http://localhost:8080
+      PORT: ${BACKEND_PORT:-5002}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/gursha_guide}
+      JWT_SECRET: ${JWT_SECRET:-local_docker_jwt_secret_change_me}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
     ports:
-      - "5002:5002"
+      - "${BACKEND_PORT:-5002}:5002"
     depends_on:
       db:
         condition: service_healthy
@@ -34,7 +34,7 @@ services:
     build:
       context: ./frontend
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
 
