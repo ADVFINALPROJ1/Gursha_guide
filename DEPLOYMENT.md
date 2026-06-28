@@ -8,6 +8,7 @@ Set these on the backend hosting provider:
 PORT=5002
 DATABASE_URL=postgresql://user:password@host:5432/gursha_guide?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
+CLIENT_URL=https://your-frontend-domain.com
 ```
 
 Use the database URL from the production PostgreSQL provider. Do not commit real secrets.

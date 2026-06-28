@@ -10,7 +10,30 @@ const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
-app.use(cors());
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+const allowedOrigins = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      const origins =
+        allowedOrigins.length > 0 ? allowedOrigins : defaultAllowedOrigins;
+
+      if (!origin || origins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+  })
+);
 app.use(express.json({ limit: "5mb" }));
 
 app.get("/", (req, res) => {
