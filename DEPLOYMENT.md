@@ -38,6 +38,7 @@ The files in `database/issue-*.sql` are incremental scripts for older databases.
 For a local containerized setup, run:
 
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
@@ -53,4 +54,11 @@ The backend API is available at:
 http://localhost:5002
 ```
 
-The Docker Compose database uses local development credentials and initializes from `database/schema.sql` on first startup. To recreate the database from scratch, remove the `postgres_data` volume before starting again.
+The Docker Compose database uses the local development values from `.env` and initializes from `database/schema.sql` on first startup. Do not commit real secrets in `.env`.
+
+To recreate the database from scratch, run:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
