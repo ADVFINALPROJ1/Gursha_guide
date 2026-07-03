@@ -1,5 +1,37 @@
 # Deployment Notes
 
+## Render Blueprint
+
+This repo includes `render.yaml` for Render Blueprint deployment. Render Blueprints define services, databases, and environment variables in a YAML file at the repo root.
+
+In Render:
+
+1. Open the Render dashboard.
+2. Create a new Blueprint.
+3. Connect this GitHub repo.
+4. Choose `render.yaml`.
+5. Fill the prompted environment variables.
+
+The Blueprint creates:
+
+```bash
+gursha-guide-api
+gursha-guide
+gursha-guide-db
+```
+
+Use these values when Render prompts for environment variables:
+
+```bash
+CLIENT_URL=https://your-frontend-render-url.onrender.com
+VITE_API_BASE_URL=https://your-backend-render-url.onrender.com/api
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+```
+
+The backend runs `backend/scripts/init-db.js` before deploys to apply `database/schema.sql`.
+
 ## Backend Environment Variables
 
 Set these on the backend hosting provider:
