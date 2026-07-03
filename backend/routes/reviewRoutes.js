@@ -72,6 +72,16 @@ function requireLogin(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  requireLogin(req, res, () => {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    next();
+  });
+}
+
 function getOptionalUser(req) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(" ")[1];
@@ -114,6 +124,29 @@ router.get("/restaurant/:restaurantId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching restaurant reviews:", error);
     res.status(500).json({ message: "Server error while fetching reviews" });
+  }
+});
+
+router.get("/receipt-verification", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT reviews.id, reviews.user_id, reviews.restaurant_id,
+              reviews.rating, reviews.comment, reviews.created_at,
+              reviews.receipt_url, reviews.receipt_status,
+              restaurants.name AS restaurant_name,
+              users.full_name AS reviewer_name
+       FROM reviews
+       LEFT JOIN restaurants ON reviews.restaurant_id = restaurants.id
+       LEFT JOIN users ON reviews.user_id = users.id
+       WHERE reviews.receipt_url IS NOT NULL
+         AND reviews.receipt_status = 'pending'
+       ORDER BY reviews.created_at DESC`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching receipt verification reviews:", error);
+    res.status(500).json({ message: "Server error while fetching receipts" });
   }
 });
 
@@ -202,6 +235,44 @@ router.post(
     }
   }
 );
+
+router.patch("/:id/receipt-status", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { receiptStatus } = req.body;
+
+    if (!["approved", "rejected"].includes(receiptStatus)) {
+      return res.status(400).json({ message: "Choose a valid receipt status" });
+    }
+
+    const result = await pool.query(
+      `UPDATE reviews
+       SET receipt_status = $1,
+           is_verified = $2
+       WHERE id = $3
+         AND receipt_url IS NOT NULL
+       RETURNING id, user_id, restaurant_id, rating, comment, created_at,
+                 is_verified, upvotes, downvotes,
+                 image_url, receipt_url, receipt_status`,
+      [receiptStatus, receiptStatus === "approved", id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Review receipt not found" });
+    }
+
+    res.json({
+      message:
+        receiptStatus === "approved"
+          ? "Receipt approved successfully"
+          : "Receipt rejected successfully",
+      review: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating receipt status:", error);
+    res.status(500).json({ message: "Server error while updating receipt" });
+  }
+});
 
 router.patch("/:id/upvote", requireLogin, async (req, res) => {
   const client = await pool.connect();

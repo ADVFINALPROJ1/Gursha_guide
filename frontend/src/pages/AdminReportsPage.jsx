@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import API from "../services/api";
 
 function RatingStars({ rating }) {
@@ -23,14 +23,18 @@ function RatingStars({ rating }) {
 
 export default function AdminReportsPage() {
   const [reports, setReports] = useState([]);
+  const [receiptReviews, setReceiptReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [receiptsLoading, setReceiptsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [receiptsError, setReceiptsError] = useState("");
   const [message, setMessage] = useState("");
   const [actionError, setActionError] = useState("");
   const [workingReportId, setWorkingReportId] = useState(null);
+  const [workingReceiptId, setWorkingReceiptId] = useState(null);
   const token = sessionStorage.getItem("token");
 
-  async function getReports() {
+  const getReports = useCallback(async () => {
     try {
       const response = await API.get("/reports");
       setReports(response.data);
@@ -39,15 +43,39 @@ export default function AdminReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const getReceiptReviews = useCallback(async () => {
+    try {
+      const response = await API.get("/reviews/receipt-verification", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setReceiptReviews(response.data);
+      setReceiptsError("");
+    } catch (err) {
+      setReceiptsError(
+        err.response?.data?.message ||
+          "Could not load receipt verification queue."
+      );
+    } finally {
+      setReceiptsLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       getReports();
+      if (token) {
+        getReceiptReviews();
+      } else {
+        setReceiptsLoading(false);
+      }
     }, 0);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [getReceiptReviews, getReports, token]);
 
   async function deleteReportedReview(reportId) {
     const shouldDelete = window.confirm("Delete this reported review?");
@@ -117,6 +145,47 @@ export default function AdminReportsPage() {
     }
   }
 
+  async function updateReceiptStatus(reviewId, receiptStatus) {
+    const actionLabel = receiptStatus === "approved" ? "approve" : "reject";
+    const shouldUpdate = window.confirm(`Are you sure you want to ${actionLabel} this receipt?`);
+
+    if (!shouldUpdate) {
+      return;
+    }
+
+    setMessage("");
+    setActionError("");
+    setWorkingReceiptId(reviewId);
+
+    try {
+      await API.patch(
+        `/reviews/${reviewId}/receipt-status`,
+        { receiptStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setReceiptReviews((currentReviews) =>
+        currentReviews.filter((review) => review.id !== reviewId)
+      );
+      setMessage(
+        receiptStatus === "approved"
+          ? "Receipt approved successfully."
+          : "Receipt rejected successfully."
+      );
+    } catch (err) {
+      setActionError(
+        err.response?.data?.message ||
+          "Could not update receipt status. Please try again."
+      );
+    } finally {
+      setWorkingReceiptId(null);
+    }
+  }
+
   return (
     <main className="p-6">
       <section className="mx-auto max-w-5xl rounded-lg bg-white p-6 shadow">
@@ -152,6 +221,118 @@ export default function AdminReportsPage() {
             {actionError}
           </p>
         )}
+
+        <section className="mb-8 rounded border border-orange-100 bg-orange-50 p-4">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Receipt Verification
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Approve receipts to mark reviews as verified.
+              </p>
+            </div>
+            <span className="rounded bg-white px-3 py-1 text-sm font-semibold text-orange-700">
+              {receiptReviews.length} pending
+            </span>
+          </div>
+
+          {receiptsLoading && (
+            <p className="rounded bg-white p-4 text-gray-600">
+              Loading receipt queue...
+            </p>
+          )}
+
+          {receiptsError && (
+            <p className="rounded bg-red-100 p-3 text-sm text-red-700">
+              {receiptsError}
+            </p>
+          )}
+
+          {!receiptsLoading && !receiptsError && receiptReviews.length === 0 && (
+            <p className="rounded border border-dashed border-orange-200 bg-white p-4 text-center font-medium text-gray-600">
+              No receipts waiting for verification
+            </p>
+          )}
+
+          {!receiptsLoading && !receiptsError && receiptReviews.length > 0 && (
+            <div className="grid gap-4">
+              {receiptReviews.map((review) => {
+                const isWorking = workingReceiptId === review.id;
+                const reviewDate = review.created_at
+                  ? new Date(review.created_at).toLocaleDateString()
+                  : "";
+
+                return (
+                  <article
+                    key={review.id}
+                    className="grid gap-4 rounded border border-orange-200 bg-white p-4 shadow-sm md:grid-cols-[220px_1fr]"
+                  >
+                    <a
+                      href={review.receipt_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block overflow-hidden rounded border border-gray-200"
+                    >
+                      <img
+                        src={review.receipt_url}
+                        alt="Receipt"
+                        className="h-52 w-full object-cover"
+                      />
+                    </a>
+
+                    <div>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold text-gray-900">
+                            {review.restaurant_name || "Unknown restaurant"}
+                          </h3>
+                          <p className="mt-1 text-sm text-gray-500">
+                            Review #{review.id}
+                            {reviewDate ? ` • ${reviewDate}` : ""}
+                          </p>
+                        </div>
+                        <span className="rounded bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-700">
+                          {review.receipt_status}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-700">
+                        <RatingStars rating={review.rating} />
+                        {Number(review.rating || 0).toFixed(1)} / 5
+                      </div>
+                      <p className="mt-2 text-gray-700">
+                        {review.comment || "Review comment unavailable."}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Reviewer: {review.reviewer_name || "Anonymous user"}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateReceiptStatus(review.id, "approved")}
+                          disabled={isWorking}
+                          className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:bg-green-300"
+                        >
+                          {isWorking ? "Saving..." : "Approve Receipt"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateReceiptStatus(review.id, "rejected")}
+                          disabled={isWorking}
+                          className="rounded border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:text-red-300"
+                        >
+                          Reject Receipt
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {!loading && !error && reports.length === 0 && (
           <p className="rounded border border-dashed border-gray-300 bg-gray-50 p-6 text-center font-medium text-gray-600">
