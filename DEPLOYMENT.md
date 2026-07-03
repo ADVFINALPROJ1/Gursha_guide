@@ -32,6 +32,8 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
 The backend runs `backend/scripts/init-db.js` before deploys to apply `database/schema.sql`.
 
+The Blueprint uses Render's free Postgres plan for demos. Render free Postgres databases have a 30-day limit, so upgrade the database plan before using this as a long-term production app.
+
 ## Backend Environment Variables
 
 Set these on the backend hosting provider:

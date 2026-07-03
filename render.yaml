@@ -37,6 +37,6 @@ services:
 
 databases:
   - name: gursha-guide-db
-    plan: basic-256mb
+    plan: free
     databaseName: gursha_guide
     user: gursha_guide
