@@ -1,5 +1,8 @@
 name: Auto-link issue from branch
 
+permissions:
+  pull-requests: write
+
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
@@ -34,7 +37,7 @@ jobs:
             }
 
             const newBody = `${body}\n\nCloses #${issueNumber}`;
-            await github.pulls.update({
+            await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber,
